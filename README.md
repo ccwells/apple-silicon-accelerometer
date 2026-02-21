@@ -1,8 +1,9 @@
 # apple-silicon-accelerometer
 
-More information: [read the article on Medium](https://medium.com/@oli.bourbonnais/your-macbook-has-an-accelerometer-and-you-can-read-it-in-real-time-in-python-28d9395fb180)
+more information: [read the article on Medium](https://medium.com/@oli.bourbonnais/your-macbook-has-an-accelerometer-and-you-can-read-it-in-real-time-in-python-28d9395fb180)
 
-reading the undocumented mems accelerometer + gyroscope on apple silicon macbooks via iokit hid
+it turns out modern macbook pros have an undocumented mems accelerometer + gyroscope managed by the sensor processing unit (SPU).
+this project reads both via iokit hid, along with lid angle and ambient light sensors from the same interface
 
 ![demo](assets/demo.gif)
 
@@ -61,7 +62,7 @@ If you have `uv`/`uvx` installed, you can also just
 
 ## code structure
 
-- spu_sensor.py - the core: iokit bindings, device discovery, accel + gyro hid callbacks, shared memory ring buffers
+- spu_sensor.py - the core: iokit bindings, device discovery, accel + gyro + lid angle + ambient light hid callbacks, shared memory ring buffers
 - motion_live.py - vibration detection pipeline, heartbeat bcg, terminal ui, main loop
 - KBPulse/ - vendored keyboard backlight driver code + binary (`KBPulse/bin/KBPulse`)
 

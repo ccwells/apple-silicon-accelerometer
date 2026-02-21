@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-motion detector - vibration, orientation & experimental heartbeat (bcg)
-apple silicon (m-series) - accelerometer + gyroscope (bosch bmi286)
+demo app for spu_sensor.py - vibration detection, orientation gauges,
+experimental heartbeat (bcg), lid angle & ambient light in a terminal dashboard
 requires: sudo python3 motion_live.py
-          pip install PyWavelets
 """
 
 import time
@@ -21,9 +20,13 @@ import multiprocessing
 import multiprocessing.shared_memory
 from collections import deque
 
+import struct
+
 from spu_sensor import (
-    sensor_worker, shm_read_new, shm_read_new_gyro,
+    sensor_worker, shm_read_new, shm_read_new_gyro, shm_snap_read,
     SHM_NAME, SHM_NAME_GYRO, SHM_SIZE,
+    SHM_NAME_ALS, SHM_ALS_SIZE, SHM_NAME_LID, SHM_LID_SIZE,
+    SHM_SNAP_HDR, ALS_REPORT_LEN,
 )
 
 
@@ -662,6 +665,68 @@ def _gauge(value, vmin, vmax, width):
     return ''.join(bar)
 
 
+def _lid_text(angle):
+    return f'  {BWHT}{angle:.0f}°{RST}'
+
+
+_ALS_SPEC_OFFSETS = [20, 24, 28, 32]
+_ALS_LUX_OFF = 40
+_ALS_BLOCKS = ' ▁▂▃▄▅▆▇█'
+_SPECTRUM_KEYS = [
+    (0.00, 120, 40, 220), (0.20, 40, 100, 220), (0.40, 30, 190, 190),
+    (0.60, 50, 210, 50),  (0.80, 210, 210, 30), (1.00, 230, 60, 30),
+]
+
+def _spec_rgb(t):
+    for i in range(len(_SPECTRUM_KEYS) - 1):
+        t0, r0, g0, b0 = _SPECTRUM_KEYS[i]
+        t1, r1, g1, b1 = _SPECTRUM_KEYS[i + 1]
+        if t <= t1:
+            f = (t - t0) / (t1 - t0) if t1 > t0 else 0.0
+            return int(r0+(r1-r0)*f), int(g0+(g1-g0)*f), int(b0+(b1-b0)*f)
+    return _SPECTRUM_KEYS[-1][1], _SPECTRUM_KEYS[-1][2], _SPECTRUM_KEYS[-1][3]
+
+def _als_bar(raw, width):
+    if raw is None or len(raw) < 44:
+        return [f'  {DIM}waiting for ALS data...{RST}', '', '']
+
+    intensity = max(0.0, min(1.0, struct.unpack_from('<f', raw, _ALS_LUX_OFF)[0]))
+    ch = [struct.unpack_from('<I', raw, o)[0] for o in _ALS_SPEC_OFFSETS]
+    ch_max = max(ch) if max(ch) > 0 else 1
+    ch_norm = [v / ch_max for v in ch]
+
+    heights = []
+    nc = len(ch_norm)
+    for i in range(width):
+        t = i / max(1, width - 1) * (nc - 1)
+        lo = min(int(t), nc - 2)
+        frac = t - lo
+        heights.append(ch_norm[lo] * (1 - frac) + ch_norm[lo + 1] * frac)
+
+    curve = ''
+    for i in range(width):
+        lvl = max(0, min(8, int(heights[i] * 8.99)))
+        r, g, b = _spec_rgb(i / max(1, width - 1))
+        curve += f'\033[38;2;{r};{g};{b}m{_ALS_BLOCKS[lvl]}'
+    curve += RST
+
+    filled = max(1, int(intensity * width)) if intensity > 0.005 else 0
+    bar = ''
+    for i in range(width):
+        r, g, b = _spec_rgb(i / max(1, width - 1))
+        if i < filled:
+            bar += f'\033[48;2;{r};{g};{b}m '
+        else:
+            bar += f'\033[48;2;25;25;35m '
+    bar += RST
+
+    return [
+        f'  {curve}',
+        f'  {bar}  {BWHT}{intensity:.3f}{RST} {DIM}lux{RST}',
+        f'  {DIM}ch: {" ".join(str(v) for v in ch)}{RST}',
+    ]
+
+
 def _vlen(s):
     return len(_ANSI_RE.sub('', s))
 
@@ -725,7 +790,7 @@ def _line(content):
 
 def _sep(label=''):
     if label:
-        rest = W - len(label) - 2
+        rest = W - _vlen(label) - 1
         return f"{DIM}├─{label}{'─' * rest}┤{RST}"
     return f"{DIM}├{'─' * W}┤{RST}"
 
@@ -744,7 +809,8 @@ def _downsample(data, width):
     return out
 
 
-def render(det, t_start, restarts, kbflash=None):
+def render(det, t_start, restarts, kbflash=None,
+           lid_angle=None, als_raw=None):
     el = time.time() - t_start
     rate = det.sample_count / el if el > 1 else 0
     now = time.time()
@@ -845,12 +911,17 @@ def render(det, t_start, restarts, kbflash=None):
         a(_line(f" {DIM}no regular pattern detected{RST}"))
         a(_line(''))
 
-    a(_sep(' Heartbeat BCG '))
-    if det.hr_bpm is not None and det.hr_confidence > 0.15:
+    hr_active = det.hr_bpm is not None and det.hr_confidence > 0.15
+    if hr_active:
         bpm = det.hr_bpm
-        conf = int(det.hr_confidence * 100)
         period_s = 60.0 / bpm
         phase = (now % period_s) < (period_s * 0.3)
+        hb_sym = f"{BRED}❤{RST}{DIM}" if phase else f"♡"
+        a(_sep(f' Heartbeat BCG {hb_sym} '))
+    else:
+        a(_sep(' Heartbeat BCG '))
+    if hr_active:
+        conf = int(det.hr_confidence * 100)
         heart = f"{BRED}♥{RST}" if phase else f"{DIM}♡{RST}"
         a(_line(f" {heart} {BRED}{BOLD}{bpm:>5.1f} BPM{RST}"
                 f"   confidence: {conf}%   band: 0.8-3Hz"))
@@ -881,6 +952,16 @@ def render(det, t_start, restarts, kbflash=None):
     a(_line(f' {DIM}Yaw  {RST} {CYN}{_gauge(yaw_d, -180, 180, gw)}{RST} {yaw_d:>+7.1f}°'))
     gx_v, gy_v, gz_v = det.gyro_latest
     a(_line(f' {DIM}ω: {gx_v:>+6.2f}  {gy_v:>+6.2f}  {gz_v:>+6.2f} °/s{RST}'))
+
+    a(_sep(' Lid Angle '))
+    if lid_angle is not None:
+        a(_line(_lid_text(lid_angle)))
+    else:
+        a(_line(f'  {DIM}no lid data{RST}'))
+
+    a(_sep(' Ambient Light '))
+    for al in _als_bar(als_raw, W - 13):
+        a(_line(al))
 
     a(_sep(' Events '))
     recent = list(det.events)[-5:]
@@ -927,7 +1008,11 @@ def main():
         print(f"\033[91m\033[1m[!] run with: sudo python3 {sys.argv[0]}\033[0m")
         sys.exit(1)
 
-    for name in (SHM_NAME, SHM_NAME_GYRO):
+    all_shms = [
+        (SHM_NAME, SHM_SIZE), (SHM_NAME_GYRO, SHM_SIZE),
+        (SHM_NAME_ALS, SHM_ALS_SIZE), (SHM_NAME_LID, SHM_LID_SIZE),
+    ]
+    for name, _ in all_shms:
         try:
             old = multiprocessing.shared_memory.SharedMemory(name=name, create=False)
             old.close()
@@ -945,6 +1030,16 @@ def main():
     for i in range(SHM_SIZE):
         shm_gyro.buf[i] = 0
 
+    shm_als = multiprocessing.shared_memory.SharedMemory(
+        name=SHM_NAME_ALS, create=True, size=SHM_ALS_SIZE)
+    for i in range(SHM_ALS_SIZE):
+        shm_als.buf[i] = 0
+
+    shm_lid = multiprocessing.shared_memory.SharedMemory(
+        name=SHM_NAME_LID, create=True, size=SHM_LID_SIZE)
+    for i in range(SHM_LID_SIZE):
+        shm_lid.buf[i] = 0
+
     running = [True]
     restart_count = [0]
 
@@ -960,6 +1055,10 @@ def main():
     t_start = time.time()
     last_total = 0
     last_gyro_total = 0
+    last_als_count = 0
+    last_lid_count = 0
+    lid_angle = None
+    als_raw = None
     last_draw = 0.0
     last_dwt = 0.0
     last_period = 0.0
@@ -982,7 +1081,11 @@ def main():
                 worker = multiprocessing.Process(
                     target=sensor_worker,
                     args=(SHM_NAME, restart_count[0]),
-                    kwargs={'gyro_shm_name': SHM_NAME_GYRO},
+                    kwargs={
+                        'gyro_shm_name': SHM_NAME_GYRO,
+                        'als_shm_name': SHM_NAME_ALS,
+                        'lid_shm_name': SHM_NAME_LID,
+                    },
                     daemon=True)
                 worker.start()
 
@@ -1005,6 +1108,16 @@ def main():
             for (gx, gy, gz) in gyro_samples:
                 det.process_gyro(gx, gy, gz)
 
+            als_data, last_als_count = shm_snap_read(
+                shm_als.buf, last_als_count, ALS_REPORT_LEN)
+            if als_data is not None:
+                als_raw = als_data
+
+            lid_data, last_lid_count = shm_snap_read(
+                shm_lid.buf, last_lid_count, 4)
+            if lid_data is not None:
+                lid_angle = struct.unpack('<f', lid_data)[0]
+
             if now - last_dwt >= 0.2:
                 det.compute_dwt()
                 last_dwt = now
@@ -1015,7 +1128,9 @@ def main():
                 last_period = now
 
             if now - last_draw >= 0.1:
-                frame = render(det, t_start, restart_count[0], kbflash=kbflash)
+                frame = render(det, t_start, restart_count[0], kbflash=kbflash,
+                              lid_angle=lid_angle,
+                              als_raw=als_raw)
                 sys.stdout.write(CLEAR + frame)
                 sys.stdout.flush()
                 last_draw = now
@@ -1048,10 +1163,9 @@ def main():
         print(f"{DIM}[ok] {det.sample_count} samples, "
               f"{restart_count[0]} restarts{RST}")
 
-        shm.close()
-        shm.unlink()
-        shm_gyro.close()
-        shm_gyro.unlink()
+        for s in (shm, shm_gyro, shm_als, shm_lid):
+            s.close()
+            s.unlink()
 
 
 if __name__ == '__main__':
