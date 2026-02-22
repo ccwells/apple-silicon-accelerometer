@@ -1,0 +1,41 @@
+[
+  {
+    "name": "[SentryMac] MacBook moved unexpectedly",
+    "type": "metric alert",
+    "query": "max(last_5m):max:sentrymac.vibration.peak{*} by {host} > 0.02",
+    "message": "{{#is_alert}}\nPhysical motion detected on **{{host.name}}**.\nPeak vibration: {{value}} g\n\nThis may indicate the device was moved, bumped, or tampered with.\n{{/is_alert}}\n\n{{#is_recovery}}\nMotion has subsided on **{{host.name}}**.\n{{/is_recovery}}\n\n@slack-security-alerts",
+    "tags": ["integration:sentrymac", "type:physical-security"],
+    "options": {
+      "thresholds": {"critical": 0.02, "warning": 0.005},
+      "notify_no_data": false,
+      "renotify_interval": 300,
+      "evaluation_delay": 60
+    }
+  },
+  {
+    "name": "[SentryMac] Sensor offline",
+    "type": "service check",
+    "query": "\"sentrymac.sensor.status\".over(\"*\").by(\"host\").last(3).count_by_status()",
+    "message": "{{#is_alert}}\nSentryMac sensor check is **CRITICAL** on **{{host.name}}**.\nThe SPU IMU may be inaccessible or the sensor worker has crashed.\n{{/is_alert}}\n\n{{#is_warning}}\nSentryMac sensor on **{{host.name}}** is not producing data (stale).\n{{/is_warning}}\n\n{{#is_recovery}}\nSentryMac sensor on **{{host.name}}** is back online.\n{{/is_recovery}}\n\n@pagerduty-it-ops",
+    "tags": ["integration:sentrymac", "type:health"],
+    "options": {
+      "thresholds": {"critical": 3, "warning": 2, "ok": 1},
+      "notify_no_data": true,
+      "no_data_timeframe": 10
+    }
+  },
+  {
+    "name": "[SentryMac] Lid opened after hours",
+    "type": "metric alert",
+    "query": "max(last_5m):avg:sentrymac.lid.angle{*} by {host} > 10",
+    "message": "{{#is_alert}}\nLid opened on **{{host.name}}** (angle: {{value}}°).\n\nIf this is outside business hours, it may indicate unauthorized physical access.\n{{/is_alert}}\n\n{{#is_recovery}}\nLid is now closed on **{{host.name}}**.\n{{/is_recovery}}\n\n@slack-security-alerts",
+    "tags": ["integration:sentrymac", "type:physical-security"],
+    "options": {
+      "thresholds": {"critical": 10},
+      "notify_no_data": false,
+      "renotify_interval": 600,
+      "evaluation_delay": 60,
+      "restricted_roles": null
+    }
+  }
+]

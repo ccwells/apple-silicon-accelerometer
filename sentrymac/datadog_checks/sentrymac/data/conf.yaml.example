@@ -1,0 +1,49 @@
+## SentryMac — Physical security monitoring for Apple Silicon MacBooks
+## Reads the undocumented Bosch BMI286 IMU via IOKit HID and reports
+## acceleration, vibration, orientation, lid angle, and ambient light
+## as Datadog metrics and events.
+##
+## Requires: macOS on Apple Silicon (M2 Pro/Max+), Datadog Agent running
+## as root (default LaunchDaemon installation).
+
+init_config:
+
+instances:
+  - min_collection_interval: 15     # seconds between check() calls
+
+    ## Sensitivity preset: controls STA/LTA and magnitude thresholds
+    ## for motion event detection.
+    ##   low    — STA/LTA > 5.0, magnitude > 0.01 g  (only strong shocks)
+    ##   medium — STA/LTA > 3.0, magnitude > 0.003 g  (default)
+    ##   high   — STA/LTA > 2.0, magnitude > 0.001 g  (detect desk taps)
+    #
+    # sensitivity: medium
+
+    ## Emit Datadog events when vibration/motion is classified above
+    ## the minimum severity threshold.
+    #
+    # motion_events_enabled: true
+
+    ## Minimum severity level to emit a Datadog event.
+    ## One of: micro_vib, vibration, shock, major_shock
+    #
+    # motion_event_min_severity: vibration
+
+    ## Emit orientation metrics (roll, pitch, yaw) derived from
+    ## Mahony AHRS quaternion filter fusing accelerometer + gyroscope.
+    #
+    # orientation_enabled: true
+
+    ## Emit ambient light sensor (ALS) lux metric.
+    #
+    # ambient_light_enabled: true
+
+    ## Emit lid angle metric (degrees).
+    #
+    # lid_angle_enabled: true
+
+    ## Standard Datadog tags applied to all metrics and events.
+    #
+    # tags:
+    #   - team:security
+    #   - location:hq-floor3

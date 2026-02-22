@@ -1,0 +1,54 @@
+{
+  "manifest_version": "2.0.0",
+  "app_uuid": "sentrymac-00000000-0000-0000-0000-000000000000",
+  "app_id": "sentrymac",
+  "display_on_public_website": false,
+  "tile": {
+    "overview": "README.md#Overview",
+    "configuration": "README.md#Setup",
+    "support": "README.md#Support",
+    "changelog": "CHANGELOG.md",
+    "description": "Monitor the physical state of Apple Silicon MacBooks — acceleration, vibration, orientation, lid angle, and ambient light — via the undocumented SPU IMU.",
+    "title": "SentryMac",
+    "media": [],
+    "classifier_tags": [
+      "Category::Security",
+      "Category::IoT",
+      "Offering::Integration",
+      "Supported OS::macOS"
+    ]
+  },
+  "assets": {
+    "integration": {
+      "auto_install": true,
+      "source_type_name": "SentryMac",
+      "source_type_id": 0,
+      "configuration": {
+        "spec": "assets/configuration/spec.yaml"
+      },
+      "events": {
+        "creates_events": true
+      },
+      "metrics": {
+        "prefix": "sentrymac.",
+        "check": "sentrymac.sensor.sample_rate",
+        "metadata_path": "metadata.csv"
+      },
+      "service_checks": {
+        "metadata_path": "assets/service_checks.json"
+      }
+    },
+    "dashboards": {
+      "SentryMac — Fleet Physical Security": "assets/dashboard.json"
+    },
+    "monitors": {
+      "MacBook moved unexpectedly": "assets/monitors.json"
+    }
+  },
+  "author": {
+    "homepage": "https://github.com/olvvier/apple-silicon-accelerometer",
+    "name": "Olivier Bourbonnais",
+    "support_email": "olvvier.b@gmail.com",
+    "sales_email": null
+  }
+}

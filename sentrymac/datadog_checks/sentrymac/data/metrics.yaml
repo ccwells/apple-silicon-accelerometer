@@ -1,0 +1,66 @@
+# Metric definitions for the SentryMac Datadog integration.
+# Each entry maps a metric name to its type for autodiscovery.
+
+sentrymac.accel.x:
+  type: gauge
+  description: Raw X-axis acceleration (g).
+
+sentrymac.accel.y:
+  type: gauge
+  description: Raw Y-axis acceleration (g).
+
+sentrymac.accel.z:
+  type: gauge
+  description: Raw Z-axis acceleration (g).
+
+sentrymac.accel.magnitude:
+  type: gauge
+  description: Total acceleration magnitude (g).
+
+sentrymac.vibration.rms:
+  type: gauge
+  description: RMS of high-pass filtered vibration over the check interval (g).
+
+sentrymac.vibration.peak:
+  type: gauge
+  description: Peak vibration amplitude in the check interval (g).
+
+sentrymac.vibration.sta_lta_ratio:
+  type: gauge
+  description: Current STA/LTA ratio (short-term / long-term energy).
+
+sentrymac.orientation.roll:
+  type: gauge
+  description: Device roll angle (degrees).
+
+sentrymac.orientation.pitch:
+  type: gauge
+  description: Device pitch angle (degrees).
+
+sentrymac.orientation.yaw:
+  type: gauge
+  description: Device yaw angle (degrees).
+
+sentrymac.gyro.x:
+  type: gauge
+  description: Angular velocity around X axis (deg/s).
+
+sentrymac.gyro.y:
+  type: gauge
+  description: Angular velocity around Y axis (deg/s).
+
+sentrymac.gyro.z:
+  type: gauge
+  description: Angular velocity around Z axis (deg/s).
+
+sentrymac.lid.angle:
+  type: gauge
+  description: Lid angle (degrees, 0 = closed, ~130 = fully open).
+
+sentrymac.ambient_light.lux:
+  type: gauge
+  description: Ambient light intensity (normalized 0-1).
+
+sentrymac.sensor.sample_rate:
+  type: gauge
+  description: Effective accelerometer sample rate (Hz).

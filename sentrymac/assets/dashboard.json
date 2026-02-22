@@ -1,0 +1,206 @@
+{
+  "title": "SentryMac — Fleet Physical Security",
+  "description": "Physical security monitoring for Apple Silicon MacBook fleets. Tracks acceleration, vibration events, orientation, lid angle, and ambient light via the undocumented SPU IMU.",
+  "widgets": [
+    {
+      "id": 1,
+      "definition": {
+        "title": "Sensor Health",
+        "type": "check_status",
+        "check": "sentrymac.sensor.status",
+        "grouping": "cluster",
+        "group_by": ["host"],
+        "tags": ["*"]
+      },
+      "layout": {"x": 0, "y": 0, "width": 4, "height": 2}
+    },
+    {
+      "id": 2,
+      "definition": {
+        "title": "Motion Events",
+        "type": "event_stream",
+        "query": "source:sentrymac",
+        "event_size": "s"
+      },
+      "layout": {"x": 4, "y": 0, "width": 8, "height": 4}
+    },
+    {
+      "id": 3,
+      "definition": {
+        "title": "Vibration RMS (fleet)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.vibration.rms{*} by {host}",
+            "display_type": "line",
+            "style": {"palette": "warm"}
+          }
+        ],
+        "yaxis": {"label": "g", "min": "0"}
+      },
+      "layout": {"x": 0, "y": 2, "width": 6, "height": 3}
+    },
+    {
+      "id": 4,
+      "definition": {
+        "title": "Vibration Peak (fleet)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "max:sentrymac.vibration.peak{*} by {host}",
+            "display_type": "bars",
+            "style": {"palette": "orange"}
+          }
+        ],
+        "yaxis": {"label": "g", "min": "0"}
+      },
+      "layout": {"x": 6, "y": 2, "width": 6, "height": 3}
+    },
+    {
+      "id": 5,
+      "definition": {
+        "title": "STA/LTA Ratio",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.vibration.sta_lta_ratio{*} by {host}",
+            "display_type": "line",
+            "style": {"palette": "cool"}
+          }
+        ],
+        "yaxis": {"min": "0"}
+      },
+      "layout": {"x": 0, "y": 5, "width": 6, "height": 3}
+    },
+    {
+      "id": 6,
+      "definition": {
+        "title": "Acceleration Magnitude",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.accel.magnitude{*} by {host}",
+            "display_type": "line",
+            "style": {"palette": "purple"}
+          }
+        ],
+        "yaxis": {"label": "g"}
+      },
+      "layout": {"x": 6, "y": 5, "width": 6, "height": 3}
+    },
+    {
+      "id": 7,
+      "definition": {
+        "title": "Orientation — Roll",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.orientation.roll{*} by {host}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {"label": "degrees", "min": "-180", "max": "180"}
+      },
+      "layout": {"x": 0, "y": 8, "width": 4, "height": 3}
+    },
+    {
+      "id": 8,
+      "definition": {
+        "title": "Orientation — Pitch",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.orientation.pitch{*} by {host}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {"label": "degrees", "min": "-90", "max": "90"}
+      },
+      "layout": {"x": 4, "y": 8, "width": 4, "height": 3}
+    },
+    {
+      "id": 9,
+      "definition": {
+        "title": "Orientation — Yaw",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.orientation.yaw{*} by {host}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {"label": "degrees", "min": "-180", "max": "180"}
+      },
+      "layout": {"x": 8, "y": 8, "width": 4, "height": 3}
+    },
+    {
+      "id": 10,
+      "definition": {
+        "title": "Lid Angle",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.lid.angle{*} by {host}",
+            "display_type": "line",
+            "style": {"palette": "green"}
+          }
+        ],
+        "yaxis": {"label": "degrees", "min": "0", "max": "180"}
+      },
+      "layout": {"x": 0, "y": 11, "width": 6, "height": 3}
+    },
+    {
+      "id": 11,
+      "definition": {
+        "title": "Ambient Light",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.ambient_light.lux{*} by {host}",
+            "display_type": "area",
+            "style": {"palette": "yellow"}
+          }
+        ],
+        "yaxis": {"label": "lux (normalized)", "min": "0", "max": "1"}
+      },
+      "layout": {"x": 6, "y": 11, "width": 6, "height": 3}
+    },
+    {
+      "id": 12,
+      "definition": {
+        "title": "Sensor Sample Rate",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:sentrymac.sensor.sample_rate{*} by {host}",
+            "display_type": "line",
+            "style": {"palette": "grey"}
+          }
+        ],
+        "yaxis": {"label": "Hz", "min": "0"}
+      },
+      "layout": {"x": 0, "y": 14, "width": 6, "height": 2}
+    },
+    {
+      "id": 13,
+      "definition": {
+        "title": "Gyro Angular Velocity",
+        "type": "timeseries",
+        "requests": [
+          {"q": "avg:sentrymac.gyro.x{*} by {host}", "display_type": "line"},
+          {"q": "avg:sentrymac.gyro.y{*} by {host}", "display_type": "line"},
+          {"q": "avg:sentrymac.gyro.z{*} by {host}", "display_type": "line"}
+        ],
+        "yaxis": {"label": "deg/s"}
+      },
+      "layout": {"x": 6, "y": 14, "width": 6, "height": 2}
+    }
+  ],
+  "template_variables": [
+    {"name": "host", "default": "*"},
+    {"name": "team", "default": "*"},
+    {"name": "location", "default": "*"}
+  ],
+  "layout_type": "ordered",
+  "notify_list": []
+}

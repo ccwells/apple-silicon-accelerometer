@@ -1,0 +1,23 @@
+[project]
+name = "datadog-sentrymac"
+version = "0.1.0"
+license = "MIT"
+description = "Datadog Agent integration for MacBook physical security monitoring via the Apple Silicon SPU IMU"
+authors = [{name = "Olivier Bourbonnais", email = "olvvier.b@gmail.com"}]
+requires-python = ">=3.9"
+dependencies = ["datadog-checks-base>=37.0.0"]
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/olvvier/apple-silicon-accelerometer"
+Repository = "https://github.com/olvvier/apple-silicon-accelerometer"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["datadog_checks*"]
+
+[tool.setuptools.package-data]
+"datadog_checks.sentrymac" = ["data/*.yaml"]
